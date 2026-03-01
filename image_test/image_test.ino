@@ -11,22 +11,37 @@
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 void setup() {
- Serial.begin(9600);
- if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
-   Serial.println(F("SSD1306 allocation failed"));
-   for(;;); // Don't proceed, loop forever
- }
- display.clearDisplay(); 
+  Serial.begin(9600);
+  setupDisplay();
+}
+
+bool setupDisplay(){
+  if(!display.begin(SSD1306_SWITCHCAPVCC, SCREEN_ADDRESS)) {
+    Serial.println(F("SSD1306 allocation failed"));
+    for(;;); // Don't proceed, loop forever
+  }
+  display.clearDisplay(); 
+  return true;
+}
+
+void oled_volumeDisplay(int vol){
+    display.clearDisplay();
+
+    display.setCursor(0,0);
+    display.println("VOLUME"); //Display current setting
+    
+    int perc = map(i, 0, 30, 0, 9); //map volume between 0-9 to set aperture display
+
+    
+    display.drawBitmap(64, 40, epd_bitmap_allArray[perc], 128, 64, WHITE);
+    display.setCursor(64,40);
+    display.println(i); //Display current volume
+    display.display();
 }
 
 void loop() {
   for (i=0; i<31; i++){
-   display.clearDisplay();
-   int perc = map(i, 0, 30, 0, 8);
-   display.drawBitmap(0, 0, epd_bitmap_allArray[perc], 128, 64, WHITE);
-   display.setCursor(0,0);            /* Set x,y coordinates */
-   display.println(i); /* Text to be displayed */
-   display.display();
-   delay(100);
+    oled_volumeDisplay(i);
+    delay(100);
   }
 }
