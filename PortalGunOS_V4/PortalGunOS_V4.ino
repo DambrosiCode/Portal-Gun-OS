@@ -1,5 +1,5 @@
 /*
-  Portal Gun V2 © 2025 by EVARATE is licensed under CC BY-NC 4.0
+  Portal Gun V3.1 © 2026 by dambrosicode is licensed under CC BY-NC 4.0
 */
 
 // Includes:
@@ -9,6 +9,13 @@
 #include <DFPlayerMini_Fast.h>
 #include <RotaryEncoder.h>
 #include "configuration.cpp"
+#include <ezButton.h>  // the library to use for SW pin
+#include <Wire.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+#include "images.h"
+// Declaration for an SSD1306 display connected to I2C (SDA, SCL pins)
+Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, -1);
 hw_timer_t *smTimer = nullptr;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////                                           INITIALIZATION                                           //////////
@@ -168,6 +175,12 @@ void setup()
   // Setup State Machine Timer:
   setupSMTimer();
 
+  // Setup Rotary
+  setupRotary();
+  
+  // Setup Display
+  setupDisplay();
+  
   debugPrint("> Setup Complete. Starting State Machine @ ");
   debugPrint(SM_TICK_RATE / 1000);
   debugPrintln("ms\n//////////////////////////////////////////////");
@@ -181,11 +194,11 @@ bool setupSerial()
   Serial.begin(115200);
   while(!Serial);
   Serial.println("+------------------------------------------------------------------+");
-  Serial.println("|  Portal Gun V4 © 2026 by dambrosicode is licensed under CC BY-NC 4.0  |");
+  Serial.println("|  Portal Gun V3.1 © 2026 by dambrosicode is licensed under CC BY-NC 4.0  |");
   Serial.println("+------------------------------------------------------------------+\n");
   Serial_printLogo();
 
-  Serial.print("Starting Portal Gun V2 on '");
+  Serial.print("Starting Portal Gun V3.1 on '");
   Serial.print(ARDUINO_BOARD);
   Serial.print("' @ ");
   Serial.print(F_CPU / 1000000);
@@ -233,6 +246,37 @@ bool setupPins()
   debugPrintln("Done.");
   return true;
 }
+
+// setup rotary
+bool setupRotary(){
+    debugPrint("> Setup Rotary... ");
+  pinMode(CLK, INPUT);
+  pinMode(CLK, INPUT_PULLUP);
+  pinMode(DATA, INPUT);
+  pinMode(DATA, INPUT_PULLUP);
+  
+  return true;
+}
+
+
+// setup oled display
+bool setupDisplay(){
+    debugPrint(">Setup Display... ");
+  if(!display.begin(SSD1306_SWITCHCAPVCC, 0x3C)) { 
+    Serial.println(F("SSD1306 allocation failed"));
+    for(;;);
+  }
+  display.clearDisplay();
+
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
+  display.setCursor(0, 10);
+
+  oled_volumeDisplay(volume_spk1);
+  
+  return true;
+}
+
 // State Machine Functions:
 void IRAM_ATTR onSMTimer()
 {
@@ -368,26 +412,65 @@ void IRAM_ATTR onRotaryEncoderPress()
 }
 
 
+/// ROTARY
+static uint8_t prevNextCode = 0;
+static uint16_t store=0;
+int8_t read_rotary() {
+  static int8_t rot_enc_table[] = {0,1,1,0,1,0,0,1,1,0,0,1,0,1,1,0};
 
+  prevNextCode <<= 2;
+  if (digitalRead(DATA)) prevNextCode |= 0x02;
+  if (digitalRead(CLK)) prevNextCode |= 0x01;
+  prevNextCode &= 0x0f;
+
+   // If valid then store as 16 bit data.
+   if  (rot_enc_table[prevNextCode] ) {
+      store <<= 4;
+      store |= prevNextCode;
+      if ((store&0xff)==0x2b) return -1;
+      if ((store&0xff)==0x17) return 1;
+   }
+   return 0;
+} 
+
+/// DISPLAY
+void oled_volumeDisplay(int vol){
+    display.clearDisplay();
+
+    display.setCursor(0,0);
+    display.println("VOLUME"); //Display current setting
+    
+    int perc = map(vol, 0, 30, 0, 8); //map volume between 0-8 to set aperture display
+
+    
+    display.drawBitmap(0, 0, epd_bitmap_allArray[perc], 128, 64, WHITE);
+    display.setCursor(60,36);
+    display.println(vol); //Display current volume
+    display.display();
+}
+
+//Machine Tick
 bool IRAM_ATTR stateMachineTick()
 {
   // Get rotary Encoder Position:
   rotaryEnc->tick();
-  static long rotEnc_lastPosition = 0;
-  long rotEnc_position = rotaryEnc->getPosition();
-  if(rotEnc_position != rotEnc_lastPosition)
-  {
-    if(rotEnc_position > rotEnc_lastPosition) flagREright = true;
-    else if(rotEnc_position < rotEnc_lastPosition) flagREleft = true;
-    rotEnc_lastPosition = rotEnc_position;
-    debugPrint("> Rotary Encoder: ");
-    debugPrint(flagREleft ? "Left " : "Right");
-    debugPrint(" (");
-    debugPrint(rotEnc_position);
-    debugPrintln(")");
-  }
-
-  if(flagREpress) debugPrintln("> Rotary Encoder: Press");
+  static int8_t rot_c,val;
+  //Set Volume and Volume Display
+   if( val=read_rotary() ) {
+      rot_c +=val;
+      if(rot_c > 30){
+        rot_c=30;
+        } else if (rot_c < 0){
+          rot_c=0;
+          }
+      // display
+      oled_volumeDisplay(rot_c);
+      // set volume
+      volume_spk1 = rot_c;
+      volume_spk2 = rot_c;
+      dfPlayer1.volume(rot_c);
+      dfPlayer2.volume(rot_c);
+   }
 
 
   switch(sm_state)

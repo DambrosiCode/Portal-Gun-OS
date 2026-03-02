@@ -60,6 +60,10 @@
 #define PIN_SPEAKER1_RX 26 // RX Pin for DFplayer2 (Idle-Humm)
 #define PIN_SPEAKER1_TX 27 // TX Pin for DFplayer2 (Idle-Humm)
 
+// pins for rotary encoder
+#define CLK 34
+#define DATA 35
+#define SW_PIN 32
 
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -82,6 +86,18 @@
 #define BAT_FULL         100   // ADC value for 'full'  battery    (4.0V)   -> Considered Full
 #define BAT_LOW          760   // ADC value for 'empty' battery    (3.2V)   -> Considered Low
 #define BAT_ADC_MIN      740   // ADC value for 0%      battery    (3.1V)   -> Considered Critical
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////                                      Rotary Settings                                               //////////
+
+#define DIRECTION_CW 0   // clockwise direction
+#define DIRECTION_CCW 1  // counter-clockwise direction
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+//////////                                      oled Display Settings                                         //////////
+
+#define SCREEN_WIDTH 128 // OLED display width, in pixels
+#define SCREEN_HEIGHT 64 // OLED display height, in pixels
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////                               Preprocessor debug stuff (DON'T TOUCH)                               //////////
